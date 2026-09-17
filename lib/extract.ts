@@ -37,7 +37,7 @@ export function extractPage() {
     const parts: string[] = [];
     let current: Element | null = el;
     while (current && current !== document.documentElement) {
-      if (current.id) {
+      if (current.id && document.querySelectorAll(`#${CSS.escape(current.id)}`).length === 1) {
         parts.unshift(`#${CSS.escape(current.id)}`);
         break;
       }
@@ -102,7 +102,8 @@ export function extractPage() {
   }
   if (!rootExcluded) visit(root);
   flush();
-  let remaining = 60_000;
+  // Resource guard for pathological/infinite pages, not the model's context window.
+  let remaining = 2_000_000;
   const sections: {
     id: string;
     title: string;
@@ -119,8 +120,8 @@ export function extractPage() {
     const words = wordCount(full);
     totalWords += words;
     totalChars += full.length;
-    if (i >= 40 || remaining <= 0) continue;
-    const text = full.slice(0, Math.min(6000, remaining));
+    if (i >= 250 || remaining <= 0) continue;
+    const text = full.slice(0, remaining);
     remaining -= text.length;
     includedChars += text.length;
     sections.push({

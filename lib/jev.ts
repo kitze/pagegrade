@@ -34,7 +34,9 @@ export function sectionRequest(page: Snapshot, section: Section) {
       pageTitle: page.title,
       description: page.description,
       language: page.language,
-      outline: page.sections.map((s) => s.title),
+      nearbyHeadings: page.sections
+        .slice(Math.max(0, page.sections.indexOf(section) - 2), page.sections.indexOf(section) + 3)
+        .map((s) => s.title),
       section: { heading: section.title, text: section.text },
     },
     questions: questions(SECTION_METRICS),

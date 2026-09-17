@@ -5,7 +5,8 @@ import ts from "typescript";
 import { JSDOM } from "jsdom";
 import type { extractPage } from "../lib/extract";
 import { parseScores, pageRequest, sectionRequest } from "../lib/jev";
-import { buildReport } from "../lib/report";
+import { buildReport, buildSectionReport } from "../lib/report";
+import { splitSection, mergeChunks, canAssessPage } from "../lib/chunks";
 import { SECTION_METRICS, PAGE_METRICS, grade, overallScore, sectionMean } from "../lib/rubric";
 
 // Compile the injectable source without tsx's Node-only __name helper.
@@ -51,15 +52,16 @@ test("reads text-only pages and hidden ancestors safely", () => {
   assert.equal(extract("<body>Plain text page without headings.</body>").sections.length, 1);
   assert.equal(extract("<div hidden><main><p>Must not read.</p></main></div>").sections.length, 0);
 });
-test("long pages disclose clipping and section caps", () => {
+test("ordinary long pages preserve every section and full text", () => {
   const page = extract(
     `<main>${Array.from({ length: 45 }, (_, i) => `<h2>Part ${i}</h2><p>${"Long content. ".repeat(600)}</p>`).join("")}</main>`,
   );
-  assert.equal(page.partial, true);
+  assert.equal(page.partial, false);
   assert.equal(page.totalSections, 45);
-  assert.ok(page.sections.length <= 40);
-  assert.ok(page.sections.every((s) => s.text.length <= 6000));
-  assert.ok(page.includedChars <= 60_000);
+  assert.equal(page.sections.length, 45);
+  assert.ok(page.sections.every((s) => s.text.length > 6000));
+  assert.equal(page.includedChars, page.totalChars);
+  assert.equal(canAssessPage(page), false);
 });
 test("Gateway request sends content, not URL or DOM selectors", () => {
   const page = extract(html);
@@ -128,4 +130,38 @@ test("complete report contains scores but no source text or private URL", () => 
   assert.ok(!JSON.stringify(report).includes("not-for-model"));
   assert.ok(!JSON.stringify(report).includes("Choose one small problem"));
   assert.throws(() => buildReport(page, [], pageScores, 0));
+});
+
+test("chunking keeps all words and averages typed metric scores", () => {
+  const text = "Concrete sentence about a useful feature. ".repeat(500).trim();
+  const chunks = splitSection(text);
+  assert.ok(chunks.length > 1);
+  assert.ok(chunks.every((c) => c.length <= 6000));
+  assert.equal(chunks.join(" "), text);
+  const low = parseScores({ answers: scores(SECTION_METRICS, 1) }, SECTION_METRICS);
+  const high = parseScores({ answers: scores(SECTION_METRICS, 3) }, SECTION_METRICS);
+  assert.equal(
+    mergeChunks([
+      { scores: low, length: 100 },
+      { scores: high, length: 300 },
+    ]).clarity,
+    62.5,
+  );
+});
+test("section results survive missing or failed whole-page assessment", () => {
+  const page = extract(html);
+  const sectionScores = parseScores({ answers: scores() }, SECTION_METRICS);
+  const report = buildSectionReport(
+    page,
+    new Map([["s1", { scores: sectionScores, chunks: 2 }]]),
+    new Map([["s2", "Rate limited"]]),
+    100,
+  );
+  assert.equal(report.sections.length, 1);
+  assert.equal(report.sections[0]!.chunks, 2);
+  assert.equal(report.sectionScore, 80);
+  assert.equal(report.overall, undefined);
+  assert.equal(report.pageScores, undefined);
+  assert.equal(report.pageEligible, false);
+  assert.equal(report.remaining?.find((s) => s.id === "s2")?.error, "Rate limited");
 });

@@ -1,8 +1,9 @@
 // Only synthetic content. Credentials come from the caller's environment.
 import { writeFileSync } from "node:fs";
-import { evaluate, pageRequest, sectionRequest } from "../lib/jev";
-import { buildReport } from "../lib/report";
-import { PAGE_METRICS, SECTION_METRICS } from "../lib/rubric";
+import { evaluate, pageRequest } from "../lib/jev";
+import { evaluateSection } from "../lib/chunks";
+import { buildSectionReport } from "../lib/report";
+import { PAGE_METRICS } from "../lib/rubric";
 import type { Snapshot } from "../lib/extract";
 
 const key = process.env.AI_GATEWAY_API_KEY;
@@ -46,21 +47,33 @@ const page: Snapshot = {
     },
   ],
 };
+if (process.env.SMOKE_LONG === "1")
+  page.sections[0]!.text = (page.sections[0]!.text + " ").repeat(25).trim();
+for (const section of page.sections) section.words = section.text.split(/\s+/).length;
+page.totalWords = page.sections.reduce((n, s) => n + s.words, 0);
+page.totalChars = page.sections.reduce((n, s) => n + s.text.length, 0);
+page.includedChars = page.totalChars;
 const start = Date.now();
 const signal = AbortSignal.timeout(90_000);
-const sections = await Promise.all(
-  page.sections.map((s) => evaluate(sectionRequest(page, s), SECTION_METRICS, key, signal)),
+const results = await Promise.all(
+  page.sections.map(async (s) => [s.id, await evaluateSection(page, s, key, signal)] as const),
 );
-const pageScores = await evaluate(pageRequest(page), PAGE_METRICS, key, signal);
-const report = buildReport(page, sections, pageScores, Date.now() - start);
+const report = buildSectionReport(page, new Map(results), new Map(), Date.now() - start);
+if (report.overall !== undefined)
+  throw new Error("Section-only run must not invent a whole-page grade.");
+const pageScores =
+  process.env.SMOKE_PAGE === "1"
+    ? await evaluate(pageRequest(page), PAGE_METRICS, key, signal)
+    : undefined;
 console.log(
   JSON.stringify(
     {
       elapsedMs: report.durationMs,
       sections: report.sections.length,
       sectionMetrics: report.sections.map((s) => Object.keys(s.scores).length),
-      pageMetrics: Object.keys(pageScores).length,
-      overall: report.overall,
+      chunks: report.sections.map((s) => s.chunks),
+      pageMetrics: pageScores ? Object.keys(pageScores).length : 0,
+      overall: report.overall ?? null,
       sectionScores: report.sections.map((s) => Math.round(s.score)),
     },
     null,

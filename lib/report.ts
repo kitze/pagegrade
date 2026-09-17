@@ -58,15 +58,18 @@ export interface Report {
     title: string;
     words: number;
     clipped: boolean;
+    chunks?: number;
     scores: Scores;
     score: number;
   }[];
-  pageScores: Scores;
+  pageScores?: Scores;
+  remaining?: { id: string; title: string; error?: string }[];
+  pageEligible?: boolean;
   seo: ReturnType<typeof seoChecks>;
   sectionScore: number;
-  pageScore: number;
+  pageScore?: number;
   seoScore: number;
-  overall: number;
+  overall?: number;
 }
 export function buildReport(
   snapshot: Snapshot,
@@ -115,5 +118,55 @@ export interface Status {
   total: number;
   error?: string;
   report?: Report;
+  selected?: string;
+  phase?: "sections" | "page";
 }
 export const IDLE: Status = { state: "idle", completed: 0, total: 0 };
+
+export function buildSectionReport(
+  snapshot: Snapshot,
+  results: Map<string, { scores: Scores; chunks: number }>,
+  failures: Map<string, string>,
+  durationMs: number,
+): Report {
+  const sections = snapshot.sections.flatMap((s) => {
+    const result = results.get(s.id);
+    return result
+      ? [
+          {
+            id: s.id,
+            title: s.title,
+            words: s.words,
+            clipped: s.clipped,
+            chunks: result.chunks,
+            scores: result.scores,
+            score: weighted(result.scores, SECTION_METRICS),
+          },
+        ]
+      : [];
+  });
+  const checks = seoChecks(snapshot);
+  const chars = snapshot.sections.reduce((n, s) => n + (results.has(s.id) ? s.text.length : 0), 0);
+  return {
+    version: 2,
+    title: snapshot.title,
+    origin: new URL(snapshot.url).origin,
+    partial: snapshot.partial,
+    totalSections: snapshot.totalSections,
+    totalWords: snapshot.totalWords,
+    coverage: snapshot.totalChars ? Math.round((chars / snapshot.totalChars) * 100) : 0,
+    analyzedAt: new Date().toISOString(),
+    durationMs,
+    sections,
+    remaining: snapshot.sections
+      .filter((s) => !results.has(s.id))
+      .map((s) => ({ id: s.id, title: s.title, error: failures.get(s.id) })),
+    pageEligible:
+      !snapshot.partial &&
+      snapshot.totalChars <= 60_000 &&
+      sections.length === snapshot.sections.length,
+    seo: checks,
+    sectionScore: sections.length ? sectionMean(sections) : 0,
+    seoScore: checks.reduce((n, c) => n + c.value, 0) / checks.length,
+  };
+}

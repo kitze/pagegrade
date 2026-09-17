@@ -15,15 +15,21 @@ bun run build
 
 1. Open `chrome://extensions` and enable **Developer mode**.
 2. Click **Load unpacked** and select `.output/chrome-mv3` inside this checkout.
-3. Open a normal web page and click PageGrade's toolbar icon. A report tab opens.
+3. Open a normal web page and click PageGrade's toolbar icon. Chrome's native side panel opens alongside the page (its side follows your Chrome preference).
 4. Save your **Vercel AI Gateway** API key under **Connection**. Gateway credits and Jev access may be required.
-5. Click **Analyze page** to consent to sending that page's extracted content for evaluation.
+5. Click **Analyze sections** to consent to sending that page's extracted content for evaluation.
 
-Browse section grades, expand metrics for their rubrics, use **Locate on page**, or **Export JSON**. **Cancel analysis** stops outstanding requests. **Clear** removes the report. Navigation or closing the source tab clears its report. Click the extension again after navigating to grant access to the new page.
+Section scores appear progressively in the side panel and as A–E badges on the actual page. Hover or focus a badge to outline its section; click it to select the breakdown in the panel. **Show scores on page** toggles overlays. Badges track scrolling/resizing; changed text invalidates affected grades.
+
+The panel follows the active tab. Each tab keeps its own session report. Click the toolbar icon on a newly selected page to grant `activeTab` access if prompted. No all-sites access is requested.
+
+Browse grades, expand rubrics, use **Locate on page**, or **Export** JSON. **Stop** retains completed section scores; an individual request failure does not discard other sections. **Clear** removes report and overlays. Source navigation or closing clears its report.
+
+**Assess whole page** is optional, available after every extracted section is scored and the full text fits within 60,000 characters. Larger pages still get their section scores, a clearly labeled **scored sections average**, word/section counts and local on-page checks—not a fabricated whole-page grade.
 
 `bun run zip` creates the unpacked archive under `.output/`. This is not a Chrome Web Store listing or a signed CRX.
 
-## Scoring v1
+## Scoring
 
 Jev answers typed `score` questions with five explicit ordered anchors. Fractional scores are valid: normalize its **0–4** result to **0–100** by multiplying by 25. These values are rubric positions, not confidence probabilities.
 
@@ -44,7 +50,7 @@ Jev answers typed `score` questions with five explicit ordered anchors. Fraction
 
 Exact questions, all five anchors, and fixed improvement guidance live in [`lib/rubric.ts`](lib/rubric.ts). Jev does not generate rewrites or free-form advice.
 
-### Whole-page score
+### Section average and optional whole-page score
 
 ```text
 sectionQuality = weighted mean of section scores
@@ -78,22 +84,22 @@ Editorial heuristic only. Not an official Nutri-Score, fact-check, comprehensive
 - Uses headings and semantic section boundaries, without counting nested text twice.
 - Excludes navigation, footers, sidebars, forms, editable fields, controls, hidden content, scripts and iframes.
 - Does not inspect images/video meaning, canvas, shadow DOM or unloaded content.
-- At most **40 sections**, **6,000 characters per section**, **60,000 total characters**, and **100,000 visited DOM nodes**.
-- Clipped/omitted content produces an explicit **sample grade**, never an unqualified full-page grade. Coverage describes extracted text, not content that the extractor cannot see.
-- Two concurrent section requests, then one page-composition request. One active page analysis globally. No automatic retries or background scanning.
-- Every required answer must be present, correctly typed, finite and in range. Any failed request means **no final grade**. No fabricated fallback scores.
-- Page changes during analysis invalidate the result. A browser worker restart shows an interrupted-run error rather than leaving a permanent spinner.
+- Long sections are split at word boundaries into **6,000-character chunks**; no ordinary section text is dropped. Ten metrics are evaluated for every chunk, then averaged by character count. The panel discloses chunked sections: these are passage-level judgments, not an assessment of cross-chunk flow.
+- Extraction safety guards: **250 sections**, **2 million characters total**, **100,000 visited DOM nodes**. Hitting a guard is disclosed and prevents whole-page assessment. Coverage refers only to extracted text.
+- At most two model requests concurrently across section workers; chunks within a section run sequentially. One active page analysis globally. No automatic retries, background scanning or automatic paid work on tab switches.
+- Every required answer must be present, correctly typed, finite and in range. One failed chunk marks that section failed; other section results survive. Failed optional page assessment also preserves section scores. No fabricated fallback scores.
+- Text changes invalidate affected displayed grades. A full snapshot check at completion rejects a changed page; navigation clears the report. A worker restart shows an interruption message with completed section scores retained.
 
 ## Privacy and security
 
-- **Click-to-analyze only.** Opening a report extracts locally; network evaluation starts only after clicking Analyze.
+- **Click-to-analyze only.** Opening the panel extracts locally; network evaluation starts only after clicking Analyze sections or Assess whole page.
 - Sends extracted main-page text, section headings, page title, description and language to **Vercel AI Gateway**, which routes to **TypeSafe AI Jev**. Do not analyze sensitive pages. Provider retention policies apply; this project does not promise zero retention.
 - Does not send the source URL, query string, DOM selectors, form values or browser history to the model. Text and metadata themselves can still contain sensitive information.
 - API key stays in extension-local storage restricted to trusted extension contexts. It is **not encrypted**, synced, bundled or sent to source pages. Remove it under Connection.
 - Scores, headings and source origin are held in browser **session** storage, cleared on source navigation/close, browser exit or Clear. Extracted source text is not persisted in reports.
 - Exported JSON includes scores, headings and source origin; review before sharing.
-- Permissions: `activeTab`, `scripting`, `storage`, and access to `https://ai-gateway.vercel.sh/*`. No persistent all-sites permission, external messaging or remote code.
-- Page content is treated as untrusted evidence in all model questions. Model output never runs code, follows links or changes page content. Locate only briefly highlights the selected section.
+- Permissions: `sidePanel`, `activeTab`, `scripting`, `storage`, and access to `https://ai-gateway.vercel.sh/*`. No persistent all-sites permission, external messaging or remote code.
+- Page content is treated as untrusted evidence in all model questions. Model output never runs code or follows links. Isolated Shadow DOM overlays display validated scores without rewriting source content. Page-side messages can only select or invalidate known sections, never access keys or start paid analysis. Locate briefly highlights the selected section.
 
 ## Development
 

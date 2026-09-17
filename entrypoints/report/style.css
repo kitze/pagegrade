@@ -769,3 +769,93 @@ footer summary::before {
     scroll-behavior: auto !important;
   }
 }
+
+.brand-button {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.panel-shell {
+  padding: 22px 16px;
+  max-width: 700px;
+}
+.panel-shell .page-heading {
+  margin-bottom: 18px;
+}
+.panel-shell h1 {
+  font-size: 25px;
+}
+.panel-shell .actions {
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.panel-shell .report-content {
+  margin-top: 24px;
+}
+.section-picker {
+  max-height: 240px;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+  margin-top: 18px;
+}
+.section-picker .nav-row {
+  min-height: 40px;
+}
+.pending {
+  color: var(--muted);
+  font-size: 11px;
+}
+.report-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.panel-shell .score-summary {
+  padding-top: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.panel-shell .facts {
+  width: 100%;
+  justify-content: space-between;
+}
+.panel-shell .components {
+  display: flex;
+  flex-wrap: wrap;
+}
+.panel-shell .components > div {
+  flex: 1;
+  min-width: 110px;
+}
+.panel-shell .connection input {
+  width: 100%;
+  margin-bottom: 10px;
+}
+.panel-shell .empty {
+  padding: 26px 16px;
+  margin: 22px 0;
+}
+.panel-shell .metric > summary {
+  grid-template-columns: minmax(0, 1fr) 65px 26px 10px;
+  gap: 9px;
+}
+.panel-shell .checks {
+  grid-template-columns: 1fr;
+}
+.panel-shell .section-heading h1 {
+  font-size: 23px;
+}
+.panel-shell footer {
+  margin-top: 24px;
+}
+.panel-shell .progress {
+  padding: 16px;
+}
+.panel-shell .notice {
+  margin-top: 12px;
+}
