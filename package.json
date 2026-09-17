@@ -1,0 +1,35 @@
+{
+  "name": "pagegrade",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kitze/pagegrade.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "lint": "oxlint --deny-warnings .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "check": "bun run typecheck && bun run lint && bun run test && bun run format:check"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^24.0.0",
+    "jsdom": "^27.0.0",
+    "oxfmt": "^0.40.0",
+    "oxlint": "^1.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3",
+    "wxt": "0.21.4"
+  }
+}

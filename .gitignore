@@ -1,0 +1,6 @@
+node_modules/
+.output/
+.wxt/
+.env*
+.pi/
+*.log
