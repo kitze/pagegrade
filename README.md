@@ -168,7 +168,12 @@ Grade page sections for clarity, writing and on\-page SEO\. WXT \+ TypeSafe AI J
       <strong><a href="https://www.theinfluencer.ai/?ref=kitze%2Fpagegrade">The Influencer AI</a></strong><br>
       AI influencer generator: create a realistic influencer from traits or your photos, then make photos, talking videos and UGC ads with the same face every time.
     </td>
-    <td width="67%" colspan="2" valign="top">
+    <td width="33%" valign="top">
+      <a href="https://pluginboard.ai/?ref=kitze%2Fpagegrade"><img src="https://pluginboard.ai/icon.png?icon.0yaf1ql1jrfgd.png" width="40" alt="Pluginboard logo"></a><br>
+      <strong><a href="https://pluginboard.ai/?ref=kitze%2Fpagegrade">Pluginboard</a></strong><br>
+      Find the right plugins for your AI agents. Plugins, skills and step-by-step recipes for Claude, ChatGPT, Grokbot, Muse, Gemini and more.
+    </td>
+    <td width="33%" valign="top">
       <strong><a href="https://www.kitze.io/sponsors?ref=kitze%2Fpagegrade">Your product here</a></strong><br>
       Reach developers in every kitze repo.
     </td>
